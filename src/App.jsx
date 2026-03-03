@@ -7,7 +7,7 @@ import ErrorAlert from "./components/ErrorAlert";
 import { analyzeTicket } from "./services/triageService";
 
 export default function App() {
-  const [provider, setProvider] = useState("mock");
+  const [provider, setProvider] = useState("openai");
   const [apiKey, setApiKey] = useState("");
   const [ticket, setTicket] = useState("");
   const [loading, setLoading] = useState(false);
@@ -29,7 +29,7 @@ export default function App() {
       return;
     }
 
-    if (provider !== "mock" && !apiKey) {
+    if (!apiKey) {
       setError("Please enter API key.");
       return;
     }
@@ -59,16 +59,12 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="max-w-6xl mx-auto space-y-6">
-
         <div className="bg-white shadow-xl rounded-2xl p-8 space-y-6">
           <h1 className="text-2xl font-semibold">
             AI-Powered ERP Ticket Triaging System
           </h1>
 
-          <ProviderSelector
-            provider={provider}
-            setProvider={setProvider}
-          />
+          <ProviderSelector provider={provider} setProvider={setProvider} />
 
           <TicketForm
             provider={provider}
@@ -87,7 +83,6 @@ export default function App() {
         {history.length > 0 && (
           <Dashboard history={history} onClear={clearHistory} />
         )}
-
       </div>
     </div>
   );
