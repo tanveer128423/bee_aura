@@ -1,8 +1,4 @@
 export async function analyzeTicket(provider, apiKey, text) {
-  if (provider === "mock") {
-    return generateMock(text);
-  }
-
   if (provider === "openai") {
     return analyzeWithOpenAI(apiKey, text);
   }
@@ -11,47 +7,11 @@ export async function analyzeTicket(provider, apiKey, text) {
     return analyzeWithGemini(apiKey, text);
   }
 
+  if (provider === "grok") {
+    return analyzeWithGrok(apiKey, text);
+  }
+
   throw new Error("Invalid provider selected.");
-}
-
-function generateMock(text) {
-  const lower = text.toLowerCase();
-
-  let business_category = "General";
-  let erp_module = "SAP";
-  let issue_type = "Support Request";
-  let priority = "Low";
-  let assigned_team = "General Support";
-
-  if (lower.includes("invoice") || lower.includes("finance")) {
-    business_category = "Finance";
-    assigned_team = "Finance Support Team";
-  }
-
-  if (lower.includes("inventory")) {
-    business_category = "Inventory";
-    assigned_team = "Inventory Team";
-  }
-
-  if (lower.includes("error") || lower.includes("unable")) {
-    issue_type = "Issue";
-    priority = "Medium";
-  }
-
-  if (lower.includes("system down") || lower.includes("blocked")) {
-    priority = "High";
-  }
-
-  const confidence = Math.floor(70 + Math.random() * 25);
-
-  return buildStructuredOutput({
-    business_category,
-    erp_module,
-    issue_type,
-    priority,
-    assigned_team,
-    confidence,
-  });
 }
 
 async function analyzeWithOpenAI(apiKey, text) {
@@ -99,7 +59,7 @@ async function analyzeWithGemini(apiKey, text) {
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
       }),
-    }
+    },
   );
 
   const data = await response.json();
@@ -107,13 +67,64 @@ async function analyzeWithGemini(apiKey, text) {
     throw new Error(data.error?.message || "Gemini API Error");
   }
 
-  const raw =
-    data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
-  const cleaned = raw.replace(/```json/g, "").replace(/```/g, "").trim();
+  const cleaned = raw
+    .replace(/```json/g, "")
+    .replace(/```/g, "")
+    .trim();
   const parsed = JSON.parse(cleaned);
 
   return buildStructuredOutput(parsed);
+}
+
+async function analyzeWithGrok(apiKey, text) {
+  const prompt = buildPrompt(text);
+
+  try {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          { role: "system", content: "You are a precise ERP triaging AI." },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0,
+        stream: false,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      const errorMsg =
+        data.error?.message || data.message || JSON.stringify(data);
+      throw new Error(`Grok API Error (${response.status}): ${errorMsg}`);
+    }
+
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      throw new Error("Grok API returned unexpected response structure");
+    }
+
+    const cleaned = data.choices[0].message.content
+      .replace(/```json/g, "")
+      .replace(/```/g, "")
+      .trim();
+
+    const parsed = JSON.parse(cleaned);
+
+    return buildStructuredOutput(parsed);
+  } catch (error) {
+    if (error.message.includes("Grok API")) {
+      throw error;
+    }
+    throw new Error(`Grok API Error: ${error.message}`);
+  }
 }
 
 function buildPrompt(ticket) {
@@ -149,8 +160,7 @@ function buildStructuredOutput(data) {
     confidence: confidence + "%",
     escalation_required: priority === "High",
     human_review_required: confidence < 75,
-    sla_target_hours:
-      priority === "High" ? 2 : priority === "Medium" ? 8 : 24,
+    sla_target_hours: priority === "High" ? 2 : priority === "Medium" ? 8 : 24,
     first_level_response:
       "Thank you for reporting this issue. Our team has been notified and will respond within SLA.",
   };

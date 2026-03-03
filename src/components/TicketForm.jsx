@@ -7,24 +7,27 @@ export default function TicketForm({
   loading,
   onAnalyze,
 }) {
+  const getProviderLabel = () => {
+    if (provider === "openai") return "OpenAI API Key";
+    if (provider === "google") return "Gemini API Key";
+    if (provider === "grok") return "Grok API Key";
+    return "";
+  };
+
   return (
     <>
-      {provider !== "mock" && (
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700">
-            {provider === "openai"
-              ? "OpenAI API Key"
-              : "Gemini API Key"}
-          </label>
-          <input
-            type="password"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder="Enter your API key"
-            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-      )}
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-gray-700">
+          {getProviderLabel()}
+        </label>
+        <input
+          type="password"
+          value={apiKey}
+          onChange={(e) => setApiKey(e.target.value)}
+          placeholder="Enter your API key"
+          className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
 
       <div className="space-y-2">
         <label className="text-sm font-medium text-gray-700">
@@ -41,7 +44,12 @@ export default function TicketForm({
 
       <button
         onClick={onAnalyze}
-        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition"
+        disabled={loading}
+        className={`w-full font-medium py-2 rounded-lg transition ${
+          loading
+            ? "bg-gray-400 cursor-not-allowed"
+            : "bg-blue-600 hover:bg-blue-700 text-white"
+        }`}
       >
         {loading ? "Analyzing..." : "Analyze Ticket"}
       </button>
