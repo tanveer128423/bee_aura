@@ -129,7 +129,41 @@ async function analyzeWithGrok(apiKey, text) {
 
 function buildPrompt(ticket) {
   return `
-Return strictly valid JSON:
+You are an AI system specialized in ERP support ticket triaging.
+
+Analyze the support ticket and classify it.
+
+Rules:
+
+Business categories must be one of:
+Finance
+Inventory
+Procurement
+HR
+Sales
+IT
+General
+
+ERP module must be one of:
+SAP
+Oracle Fusion
+Microsoft Dynamics
+Other
+
+Issue type must be one of:
+Incident
+Change Request
+Support Request
+Information Request
+
+Priority rules:
+High = system down, blocking operations, financial impact, production issue
+Medium = workflow disruption or functional problem
+Low = question, guidance request, or minor issue
+
+Confidence must be a number between 0 and 100.
+
+Return ONLY valid JSON.
 
 {
   "business_category": "",
